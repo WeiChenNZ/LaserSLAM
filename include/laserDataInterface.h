@@ -3,7 +3,7 @@
 
 #include <vector>
 
-//模板化激光点数据类型，方便后续根据不同精度调整
+//raw laser data, in r theta mode
 template<class T>
 class LaserPoint{
     public:
@@ -12,6 +12,7 @@ class LaserPoint{
     T angle;
 };
 
+//decoded laser data, in x y mode
 template<class T>
 class LaserPointXY{
     public:
@@ -27,8 +28,7 @@ class LaserDataInterface{
 
     virtual std::vector<LaserPointXY<T>>* getLaserScanXY(void) = 0;
 
-    //通过数据是否更新的接口同步多线程，此方法不一定是最好的方法
-    //后期可以考虑使用条件变量等方法来同步线程
+    //this is not the best way to synchronize data
     virtual bool ifDataUpdated(void) = 0;
 
     virtual bool isDataQueueEmpty(void) = 0;
@@ -37,10 +37,6 @@ class LaserDataInterface{
 
     virtual ~LaserDataInterface(void){};
 
-    // std::vector<LaserPoint<T>> laserScan;
-    // std::vector<LaserPointXY<T>> laserScanXY;
-
-    //std::vector<std::vector<LaserPointXY<T>>> laserScanQueue;
 };
 
 

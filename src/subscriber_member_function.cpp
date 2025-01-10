@@ -32,7 +32,7 @@ class OfflineDataSubscriber : public rclcpp::Node
     {
       offlineLaserDataPtr->decodeLaserData(msg);
       
-      // //显示激光数据
+      // //visualize raw laser scan data, just for debug
       // sensor_msgs::msg::LaserScan scan;
       // scan.header.frame_id = "laser_frame";
       // scan.header.stamp = msg->header.stamp;

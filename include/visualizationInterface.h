@@ -4,7 +4,7 @@
 #include "probablisticGridMap.h"
 #include "Eigen/Core"
 
-//显示用的虚基类，提供了显示接口
+//visualization public interface
 class VisualizationInterface{
 
     public:

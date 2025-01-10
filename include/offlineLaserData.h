@@ -10,7 +10,7 @@
 #include <queue>
 #include <mutex>
 
-//ROS2 离线激光数据解析类
+//ROS2 offline laser data decode
 class OfflineLaserData: public LaserDataInterface<float>{
 
     public:

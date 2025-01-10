@@ -5,9 +5,10 @@
 #include "laserDataInterface.h"
 #include "Eigen/Core" 
 
-//两个地图，一个高精度地图0.03m*0.03m，一个低精度地图0.3m*0.3m
-//地图最大长宽为300m*300m，对应的栅格为10000*10000和1000*1000
-//存储方式使用float数组（4字节），对应的空间大小为400MB和4MB
+
+//two maps, one is high resolution grid map with 0.03m*0.03m, and the other is low resolution grid map with 0.3m*0.3m
+//the maximum distance of the map is 300m*300m, so the maximum grid index in the two maps should be 10000 and 1000
+//use float type (4 bytes) to store the maps, need 400MB and 4MB RAM respectively
 #define HighResolutionGridSize 0.03f
 #define LowResolutionGridSize  0.3f
 #define MaxMapSize 300  //米
@@ -38,26 +39,25 @@ enum MapResolution{
 };
 
 //cartographer
+//not used now
 #define Phit  0.55
 #define Pmiss  0.49
 
 //log P(hit)/[1 - P(hit)]
+//not used now
 #define logPhit    0.05017
 #define logPmiss  -0.05436
 
-//hit则对应栅格加上hit概率，miss则对应栅格加上miss概率
+//this is log(odd) definition, not probalility
+// log(Odd(probablility))
+// Odd = probablility / (1 - probablility)
 #define HitProbability 0.087   //log 0.55/(1-0.55)
 #define MissProbability -0.017    // log 0.49/(1-0.49)
-// #define HitProbability 0.05017//0.9f //log P(hit)/[1 - P(hit)]
-// #define MissProbability -0.05436//-0.2f
-// #define HitProbability 0.9f //log P(hit)/[1 - P(hit)]
-// #define MissProbability -0.2f
 
-
+//in cartographer, the maximum probability is 0.9
+//in this project, the maximum probability is about 0.91, so that the log(odd) value is 1
 #define LogOddMax 1.0f
 #define LogOddMin -1.0f
-
-
 
 
 class ProbablisticGridMap{

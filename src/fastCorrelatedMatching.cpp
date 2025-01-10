@@ -6,13 +6,16 @@
 
 using std::cout;
 
-//使用分支定界算法进行快速匹配
+//branch and bound algorithm
 void FastCorrelatedMatching::matching(void)
 {
     getLaserScan();
-    //角度搜索范围-30～+30度，1度步长
-    //尺寸地图搜索区域为1.5米x1.5米，对应的第精度搜索区域5*5栅格
-    //Step1：搜索第一层低精度栅格
+
+    //angular search window -5° ~ +5°
+    //x search window -2 ~ +2
+    //y search window -2 ~ +2
+
+    //Step1：search low resolution grid map
     float angle = 0.0, xOffset = 0.0, yOffset = 0.0;
     float mark = 0.0;
     MatchingResult lowResMatchingResult;
@@ -26,12 +29,10 @@ void FastCorrelatedMatching::matching(void)
     for(int angleIndex = -5; angleIndex <= 5; angleIndex++)
     {
         angle = (float)angleIndex * M_PI / 180.0 + fastMatchingResult(2);
-        //遍历5*5低精度栅格
+        //search x y window
         for(int i = -2; i <= 2; i++)
-        // for(int i = -1; i <= 1; i++)
         {
             for(int j = -2; j <= 2; j++)
-            // for(int j = -1; j <= 1; j++)
             {
                 xOffset = (float)i * LowResolutionGridSize;
                 yOffset = (float)j * LowResolutionGridSize;
@@ -49,7 +50,7 @@ void FastCorrelatedMatching::matching(void)
                 lowResVec.push_back(lowResMatchingResult);
             }
         }
-        //对低分辨率地图的结果排序，按照从大到小排序
+        //find maximum value 
         sort(lowResVec.begin(), lowResVec.end(), 
             [](MatchingResult x,MatchingResult y){return x.value > y.value;});//lamda表达式实现找最大值
         
@@ -59,19 +60,17 @@ void FastCorrelatedMatching::matching(void)
             std::cout<<lowResVec.at(i).i<<" "<<lowResVec.at(i).j<<std::endl;
         }    */ 
 
-           //Step2：找到最大的低分辨率栅格下的高分辨率栅格的最大匹配值，并将其作为临时的最大匹配值
+        //Step2：find temporary maximun value in the high resolution map grids
         maxMatchingRate = findHighResMatchingResult(angle, lowResVec.begin()->i, lowResVec.begin()->j);
 
-        lowResVec.erase(lowResVec.begin());//删除第一个元素，相当于删除的第一个分支，因为第一个分支已经计算完了
+        lowResVec.erase(lowResVec.begin());//pop the first element
 
-        //Step3：从剩下的分支下的低分辨率地图开始找，看是否有比零时maxMatchingRate大的，如果有则展开该分支，并计算高精度匹配度，如果匹配度高于maxMatchingRate,则替换
-        //直到找不到为止
+        //Step3：chech the other branches and find out if there are larger values in these branches
         while(lowResVec.size() > 0)
         {
-            if(lowResVec.begin()->value < maxMatchingRate.value) break;//寻找结束
+            if(lowResVec.begin()->value < maxMatchingRate.value) break;//end 
             else if(lowResVec.begin()->value >= maxMatchingRate.value)
             {
-                //展开该栅格
                 MatchingResult tempMax = findHighResMatchingResult(angle, lowResVec.begin()->i, lowResVec.begin()->j);
                 if( maxMatchingRate.value < tempMax.value)
                 {
@@ -84,7 +83,7 @@ void FastCorrelatedMatching::matching(void)
             }
         }     
 
-        //Step4:记录该角度下的得分
+        //Step4:record the largest value in this angle
         MatchingResultWithAngle result;
         result.angle = angle;
         result.value = maxMatchingRate.value;
@@ -96,10 +95,9 @@ void FastCorrelatedMatching::matching(void)
         lowResVec.clear();
 
         //std::cout<<"interation = "<<angleIndex<<" "<<"angle = "<<angle*180./3.14<<" "<<"value = "<<result.value<<" x y = "<<maxMatchingRate.i<<" "<<maxMatchingRate.j<<std::endl;
-        int b =0;
     }
 
-    //Step5:对所有角度下的得分排序
+    //Step5:sort all values in each angle
     sort(matchingResult.begin(), matchingResult.end(), 
         [](MatchingResultWithAngle x,MatchingResultWithAngle y){return x.value > y.value;});//lamda表达式实现找最大值
 
@@ -109,7 +107,7 @@ void FastCorrelatedMatching::matching(void)
     //     std::cout<<"inter = "<<i<<" "<<"value = "<<matchingResult[i].value<<" angle = "<<matchingResult[i].angle*180./3.14<<std::endl;
     // }  
 
-    //Step6:将最大匹配值对应的变换矩阵T赋值给Twc
+    //Step6:find out the maximum value and set it to the result
     Twc = matchingResult.begin()->T;
     fastMatchingResult(2) = matchingResult.begin()->angle;
     fastMatchingResult(0) = matchingResult.begin()->T(0,2);
@@ -119,10 +117,9 @@ void FastCorrelatedMatching::matching(void)
     // std::cout<<"final result"<<std::endl;
     // std::cout<<"angle = "<<atan(Twc(1,0)/Twc(0,0))*180./3.14<<" x = "<<Twc(0,2)<<" y = "<<Twc(1,2)<<std::endl;
 
-    int a = 0;
 }
 
-//lowI,LowJ为上一层低分辨率栅格匹配得到的index
+
 MatchingResult FastCorrelatedMatching::findHighResMatchingResult(float angle, int lowI, int lowJ)
 {
     MatchingResult HighResMatchingResult;
@@ -133,15 +130,15 @@ MatchingResult FastCorrelatedMatching::findHighResMatchingResult(float angle, in
     {
         for(int j = 0; j < 10; j++)
         {
-            //低精度坐标转高精度坐标，需要考虑小数点后的数字如何操作
-            //低精度的坐标小数点后的数字丢弃，只保留低精度坐标起始位置
+            //calculate x,y index in high resolution grid map
+            //transfer x,y index into world frame
             int lowOffsetX = int((Twc(0,2) + (float)lowI * LowResolutionGridSize)/LowResolutionGridSize);
             T(0,2) = (float)lowOffsetX * LowResolutionGridSize + (float)i * HighResolutionGridSize;
 
             int lowOffsetY = int((Twc(1,2) + (float)lowJ * LowResolutionGridSize)/LowResolutionGridSize);
             T(1,2) = (float)lowOffsetY * LowResolutionGridSize + (float)j * HighResolutionGridSize;
 
-            //R矩阵
+            //rotaion matrix
             T(0,0) = T(1,1) = cos(angle);
             T(0,1) = -sin(angle);
             T(1,0) = sin(angle);
@@ -156,7 +153,7 @@ MatchingResult FastCorrelatedMatching::findHighResMatchingResult(float angle, in
     }
 
     sort(highResVec.begin(), highResVec.end(), 
-            [](MatchingResult x,MatchingResult y){return x.value > y.value;});//lamda表达式实现找最大值
+            [](MatchingResult x,MatchingResult y){return x.value > y.value;});//lamda expression
 
     return *highResVec.begin();
 }
@@ -170,7 +167,6 @@ void FastCorrelatedMatching::getLaserScan(void)
     {
         laserScanXY.push_back(laserScan->getLaserScanXY()->at(i));
     }
-    //memcpy(&laserScanXY, laserScan->getLaserScanXY(), laserScan->getLaserScanXY()->size());
 
     //rwLocker.unlock();
 }

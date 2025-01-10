@@ -7,7 +7,6 @@
 #include <mutex>
 
 
-//存储地图匹配结果的得分和index
 struct MatchingResult{
     float value;
     int i;
@@ -21,9 +20,6 @@ struct MatchingResultWithAngle{
     Eigen::Matrix3f T;
 };
 
-//世界坐标系定义为w，激光坐标系定义为c
-//Twc表示世界坐标系转换到激光坐标系
-//Tcw表示激光坐标系转换到世界坐标系
 
 class FastCorrelatedMatching{
 
@@ -49,8 +45,10 @@ class FastCorrelatedMatching{
     ProbablisticGridMap *map;
     LaserDataInterface<float> *laserScan;
     
-    Eigen::Matrix3f Tcw, Twc;
-    Eigen::Vector3f fastMatchingResult;
+    //world frame is w, laser frame is c
+    //Twc is transformation from laser to world and vice versa
+    Eigen::Matrix3f Tcw, Twc; //T matrix is used to calculate
+    Eigen::Vector3f fastMatchingResult; //vector3f is used to store result
 
     std::vector<LaserPointXY<float>> laserScanXY;
     std::mutex rwLocker;

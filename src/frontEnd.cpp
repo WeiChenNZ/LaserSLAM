@@ -13,7 +13,7 @@
         static int num = 0;
         if(isFirstRun && !laserScan->isDataQueueEmpty())
         {
-            //第一次运行，不用匹配直接把扫描加入空地图中
+            //first run, just add laser scan into grid map
             isFirstRun = 0;
             Eigen::Matrix3f T = Eigen::Matrix3f::Identity();
             map->updateHighMap(laserScan->getLaserScanXY(), T);//Eigen::Matrix3f::Identity());
@@ -22,7 +22,7 @@
             visual->showHighMap(map);
             //visual->showLowMap(map);
 
-            laserScan->popFrontData();//操作完毕后将队列中的第一个元素删除
+            laserScan->popFrontData();//manually delete the first data in the queue
 
             //sleep(2);
             //printf("-------------------------first cirle--------------------------------------\n");
@@ -31,13 +31,15 @@
         else if(!laserScan->isDataQueueEmpty())
         {
 
+            //step1: fast correlated scan matching
             std::cout<<"Start matching ..."<<std::endl;
             fastMatching->matching();
             std::cout<<"matching circle = "<<num++<<std::endl;
 
 
-
 //////////////////////////////////////////////////////////////////////////////////////////////
+
+            //step2: nonlinear least-squares method, ceres scan matching 
             Eigen::Vector3f ceresInitialPos= fastMatching->getScanPosVect();
             // Eigen::Vector3f ceresInitialPos = ceresScanMatcher->getCeresMatcherPose();
             Eigen::Vector3f resultPos;
@@ -78,7 +80,7 @@
             visual->showLaserScanWithPos(laserScan->getLaserScanXY(), T);
             // visual->showLaserScanWithPos(laserScan->getLaserScanXY(), fastMatching->getScanPos());
 
-            //show highmap need to calculate 10000*10000 tiems so it's really slow
+            //show highmap needs to calculate 10000*10000 times so it's really slow
             if(num % 10 == 0)
                 visual->showHighMap(map);
             //visual->showLowMap(map);

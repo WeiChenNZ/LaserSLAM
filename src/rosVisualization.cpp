@@ -3,6 +3,9 @@
 #include <Eigen/Core>
 
 
+//TODO
+//the frame definition in ROS2 rviz2 seems not the same as the grid frame definition
+//need to be figured out later
 
 void RosVisualization::showHighMap(ProbablisticGridMap *pMap)
 {
@@ -63,7 +66,6 @@ void RosVisualization::showLowMap(ProbablisticGridMap *pMap)
 }
 
 
-//这个函数在显示的时候有问题，角度显示似乎不正确，后续需要调试查找bug
 void RosVisualization::showPosition(Eigen::Vector3f P)
 {
     auto t = rclcpp::Clock().now();
@@ -116,31 +118,15 @@ void RosVisualization::showLaserScanWithPos(std::vector<LaserPointXY<float>>* la
 
     //std::cout << "Trot = "<<Trot<<std::endl;
     
-    
-    //because I've already deleted some points which are too large or too low, 
-    //so I need to insert the areas with some useless points,
-    //or the points's angle after them will be decoded incorrectly,
-    //Not done yet, do it later 20241218
     for(size_t i = 0; i < len; ++i)
     {
         Eigen::Matrix<float, 3, 1> point(laserScan->at(i).x, laserScan->at(i).y, 1.);
         pointInWorld = Trot* T * point;
 
-        scan.points.at(i).x = -pointInWorld(0);
+        scan.points.at(i).x = -pointInWorld(0); //why?
         scan.points.at(i).y = pointInWorld(1);
         scan.points.at(i).z = 0.;
         scan.channels[0].values.at(i) = laserScan->at(i).intensity;
-
-        // if(i == 0)
-        // {
-        //     //adjust start angle
-        //     float startangle = atan(pointInWorld(1)/pointInWorld(0));
-        //     scan.angle_min = startangle;
-        //     //scan.angle_max = startangle + 4.7;
-        // }
-
-        // scan.ranges[i] = sqrt(pointInWorld(0)*pointInWorld(0) + pointInWorld(1)*pointInWorld(1));
-        // scan.intensities[i] = laserScan->at(i).intensity;
     }
 
     PointCloudPublisher_->publish(scan); 

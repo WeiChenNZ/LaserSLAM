@@ -11,22 +11,18 @@ using std::cout;
 using std::clamp;
 
 
-void ProbablisticGridMap::setLaserGridProbability_backup(int startIndexX, int startIndexY, int endIndexX, int endIndexY)
-{
-    HighResMap[endIndexX][endIndexY] += HitProbability;
-}
-
-//计算从startIndex出发到endIndex结束的射线
-//endIndex的栅格hit概率增加
-//射线穿过的其他栅格miss概率增加
-//在这个函数中不判断index越界问题，由其他函数判断
-//该算法只在高精度地图下使用，因为低精度地图是通过高精度地图生成的，不需要通过射线生成
+//set the probabilities of the grids which laser goes through
+//the grids on the end index add hit probability
+//the grids which laser goes through add miss probability
+//probability is represented in the log(Odd(probability)) form
+//this function is only used in the high resolution map
 void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startIndexY, int endIndexX, int endIndexY)
 {
-    //从起点栅格的中心出发到终点栅格的中心结束
+    //laser line starts from start index and end at end index
+
+    //vertical
     if(endIndexX == startIndexX)
     {
-        //射线垂直
         if(startIndexY < endIndexY)
         {
             for(int j = startIndexY; j < endIndexY; j++)
@@ -50,12 +46,12 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
         return;
     }
 
-
+    
     float k = float(endIndexY - startIndexY) / float(endIndexX - startIndexX);
-    //判断|k|是否小于1,如果小于1则说明角度小于45度，大于1则说明角度大于45度（0-90度范围）
+    //if |k| is less than 1, then the angle is less than 45°, angle in 0°~90°
     if(k == 0)
     {
-        //射线水平
+        //horizontal
         if(startIndexX < endIndexX)
         {
             for(int i  = startIndexX; i < endIndexX; i++)
@@ -79,8 +75,8 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
     }
     else if(abs(k) < 1)
     {
-        //假设栅格的边长为1,则第一步和最后一步只走0.5
-        //小于45度时，按照x步长为1,y的步长为k增加
+        //let grid lenght is 1, then the first and last steps are 0.5
+        //if angle is less than 45°, then step lenght on x diretion is 1, on y direction is k
         int xOffset = endIndexX - startIndexX;
         int yOffset = endIndexY - startIndexY;
         float xIncrease = float(abs(xOffset)/xOffset);
@@ -88,12 +84,11 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
         int xIndex = 0, yIndex = 0;
         float x = float(startIndexX) + 0.5, y = float(startIndexY) + 0.5;
 
-        //走xOffset + 1步从起点走到终点，因为第1和最后一步都是半步长
         for(int i = 0; i < abs(xOffset) + 1; i++)
         {
             if(i == 0)
             {
-                //第一步
+                //the first step
                 x += xIncrease * 0.5;
                 y += yIncrease * 0.5;
                 xIndex = int(x) ;//-1;
@@ -103,7 +98,7 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
             }
             else if(i == abs(xOffset))
             {
-                //最后一步
+                //the last step
                 x += xIncrease * 0.5;
                 y += yIncrease * 0.5;
                 xIndex = int(x) ;//-1;
@@ -113,10 +108,11 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
             }
             else
             {
-                //中间步
+                //middle steps
                 x += xIncrease;
                 xIndex = int(x) ;//-1;
-                //y方向有可能一步跨越两个格子，如果y1 ！= y2则跨越两个格子，需要更新两个
+
+                //if y1 != y2, then laser goes through two grids on y direction
                 int y1 = int(y);
                 y += yIncrease;
                 int y2 = int(y);
@@ -139,8 +135,8 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
     } 
     else if(abs(k) > 1)
     {
-        //假设栅格的边长为1,则第一步和最后一步只走0.5
-        //大于45度时，按照x步长为1/k,y的步长为1增加
+        //let grid lenght is 1, then the first and last steps are 0.5
+        //if angle is less than 45°, then step lenght on x diretion is 1, on y direction is k
         int xOffset = endIndexX - startIndexX;
         int yOffset = endIndexY - startIndexY;
         float xIncrease = float(abs(xOffset)/xOffset) / abs(k);
@@ -148,12 +144,11 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
         int xIndex = 0, yIndex = 0;
         float x = float(startIndexX) + 0.5, y = float(startIndexY) + 0.5;
 
-        //走xOffset + 1步从起点走到终点，因为第1和最后一步都是半步长
         for(int i = 0; i < abs(yOffset) + 1; i++)
         {
             if(i == 0)
             {
-                //第一步
+                //the first step
                 x += xIncrease * 0.5;
                 y += yIncrease * 0.5;
                 xIndex = int(x);
@@ -163,7 +158,7 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
             }
             else if(i == abs(yOffset))
             {
-                //最后一步
+                //the last step
                 x += xIncrease * 0.5;
                 y += yIncrease * 0.5;
                 xIndex = int(x);
@@ -173,10 +168,10 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
             }
             else
             {
-                //中间步
+                //middle steps
                 y += yIncrease;
                 yIndex = int(y) ;//-1;
-                //x方向有可能一步跨越两个格子，如果x1 ！= x2则跨越两个格子，需要更新两个
+                //if x1 != x2, then laser goes through two grids on x direction
                 int x1 = int(x);
                 x += xIncrease;
                 int x2 = int(x);
@@ -197,7 +192,7 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
     }
     else if(abs(k) == 1)
     {
-        //射线45度
+        //45°
         int xOffset = endIndexX - startIndexX;
         int yOffset = endIndexY - startIndexY;
         int xIncrease = abs(xOffset)/xOffset;
@@ -218,207 +213,8 @@ void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startInde
 
 }
 
-// void ProbablisticGridMap::setLaserGridProbability(int startIndexX, int startIndexY, int endIndexX, int endIndexY)
-// {
-//     //从起点栅格的中心出发到终点栅格的中心结束
-//     if(endIndexX == startIndexX)
-//     {
-//         //射线垂直
-//         if(startIndexY < endIndexY)
-//         {
-//             for(int j = startIndexY; j < endIndexY; j++)
-//             {
-//                 HighResMap[j][startIndexX] += MissProbability;
-//                 // HighResMap[j][startIndexX] = std::clamp<float>(HighResMap[j][startIndexX], LogOddMin, LogOddMax);
-//             }
-//             HighResMap[endIndexY][endIndexX] += HitProbability;
-//             // HighResMap[endIndexY][endIndexX] = std::clamp<float>(HighResMap[endIndexY][endIndexX], LogOddMin, LogOddMax);
-//         }
-//         else
-//         {
-//             for(int j = startIndexY; j > endIndexY; j--)
-//             {
-//                 HighResMap[j][startIndexX] += MissProbability;
-//                 // HighResMap[j][startIndexX] = std::clamp<float>(HighResMap[j][startIndexX], LogOddMin, LogOddMax);
-//             }
-//             HighResMap[endIndexY][endIndexX] += HitProbability;
-//             // HighResMap[endIndexY][endIndexX] = std::clamp<float>(HighResMap[endIndexY][endIndexX], LogOddMin, LogOddMax);
-//         }
-//         return;
-//     }
 
 
-//     float k = float(endIndexY - startIndexY) / float(endIndexX - startIndexX);
-//     //判断|k|是否小于1,如果小于1则说明角度小于45度，大于1则说明角度大于45度（0-90度范围）
-//     if(k == 0)
-//     {
-//         //射线水平
-//         if(startIndexX < endIndexX)
-//         {
-//             for(int i  = startIndexX; i < endIndexX; i++)
-//             {
-//                 HighResMap[endIndexY][i] += MissProbability;
-//                 // HighResMap[endIndexY][i] = std::clamp<float>(HighResMap[endIndexY][i], LogOddMin, LogOddMax);
-//             }
-//             HighResMap[endIndexY][endIndexX] += HitProbability;
-//             // HighResMap[endIndexY][endIndexX] = std::clamp<float>(HighResMap[endIndexY][endIndexX], LogOddMin, LogOddMax);
-//         }
-//         else
-//         {
-//             for(int i = startIndexX; i > endIndexX; i--)
-//             {
-//                 HighResMap[endIndexY][i] += MissProbability;
-//                 // HighResMap[endIndexY][i] = std::clamp<float>(HighResMap[endIndexY][i], LogOddMin, LogOddMax);
-//             }
-//             HighResMap[endIndexY][endIndexX] += HitProbability;
-//             // HighResMap[endIndexY][endIndexX] = std::clamp<float>(HighResMap[endIndexY][endIndexX], LogOddMin, LogOddMax);
-//         }
-//     }
-//     else if(abs(k) < 1)
-//     {
-//         //假设栅格的边长为1,则第一步和最后一步只走0.5
-//         //小于45度时，按照x步长为1,y的步长为k增加
-//         int xOffset = endIndexX - startIndexX;
-//         int yOffset = endIndexY - startIndexY;
-//         float xIncrease = float(abs(xOffset)/xOffset);
-//         float yIncrease = float(abs(yOffset)/yOffset) * abs(k);
-//         int xIndex = 0, yIndex = 0;
-//         float x = float(startIndexX) + 0.5, y = float(startIndexY) + 0.5;
-
-//         //走xOffset + 1步从起点走到终点，因为第1和最后一步都是半步长
-//         for(int i = 0; i < abs(xOffset) + 1; i++)
-//         {
-//             if(i == 0)
-//             {
-//                 //第一步
-//                 x += xIncrease * 0.5;
-//                 y += yIncrease * 0.5;
-//                 xIndex = int(x) ;//-1;
-//                 yIndex = int(y);
-//                 HighResMap[yIndex][xIndex] += MissProbability;
-//                 // HighResMap[yIndex][xIndex] = std::clamp<float>(HighResMap[yIndex][xIndex], LogOddMin, LogOddMax);
-//             }
-//             else if(i == abs(xOffset))
-//             {
-//                 //最后一步
-//                 x += xIncrease * 0.5;
-//                 y += yIncrease * 0.5;
-//                 xIndex = int(x) ;//-1;
-//                 yIndex = int(y);
-//                 HighResMap[yIndex][xIndex] += HitProbability;
-//                 // HighResMap[yIndex][xIndex] = std::clamp<float>(HighResMap[yIndex][xIndex], LogOddMin, LogOddMax);
-//             }
-//             else
-//             {
-//                 //中间步
-//                 x += xIncrease;
-//                 xIndex = int(x) ;//-1;
-//                 //y方向有可能一步跨越两个格子，如果y1 ！= y2则跨越两个格子，需要更新两个
-//                 int y1 = int(y);
-//                 y += yIncrease;
-//                 int y2 = int(y);
-//                 if(y1 != y2)
-//                 {
-//                     HighResMap[y1][xIndex] += MissProbability;
-//                     // HighResMap[y1][xIndex] = std::clamp<float>(HighResMap[y1][xIndex], LogOddMin, LogOddMax);
-//                     HighResMap[y2][xIndex] += MissProbability;
-//                     // HighResMap[y2][xIndex] = std::clamp<float>(HighResMap[y2][xIndex], LogOddMin, LogOddMax);
-//                 }
-//                 else 
-//                 {
-//                     HighResMap[y1][xIndex] += MissProbability;
-//                     // HighResMap[y1][xIndex] = std::clamp<float>(HighResMap[y1][xIndex], LogOddMin, LogOddMax);
-//                 }
-//             }
-//         }
-
-
-//     } 
-//     else if(abs(k) > 1)
-//     {
-//         //假设栅格的边长为1,则第一步和最后一步只走0.5
-//         //大于45度时，按照x步长为1/k,y的步长为1增加
-//         int xOffset = endIndexX - startIndexX;
-//         int yOffset = endIndexY - startIndexY;
-//         float xIncrease = float(abs(xOffset)/xOffset) / abs(k);
-//         float yIncrease = float(abs(yOffset)/yOffset);
-//         int xIndex = 0, yIndex = 0;
-//         float x = float(startIndexX) + 0.5, y = float(startIndexY) + 0.5;
-
-//         //走xOffset + 1步从起点走到终点，因为第1和最后一步都是半步长
-//         for(int i = 0; i < abs(yOffset) + 1; i++)
-//         {
-//             if(i == 0)
-//             {
-//                 //第一步
-//                 x += xIncrease * 0.5;
-//                 y += yIncrease * 0.5;
-//                 xIndex = int(x);
-//                 yIndex = int(y) ;//-1;
-//                 HighResMap[yIndex][xIndex] += MissProbability;
-//                 // HighResMap[yIndex][xIndex] = std::clamp<float>(HighResMap[yIndex][xIndex], LogOddMin, LogOddMax);
-//             }
-//             else if(i == abs(yOffset))
-//             {
-//                 //最后一步
-//                 x += xIncrease * 0.5;
-//                 y += yIncrease * 0.5;
-//                 xIndex = int(x);
-//                 yIndex = int(y) ;//-1;
-//                 HighResMap[yIndex][xIndex] += HitProbability;
-//                 // HighResMap[yIndex][xIndex] = std::clamp<float>(HighResMap[yIndex][xIndex], LogOddMin, LogOddMax);
-//             }
-//             else
-//             {
-//                 //中间步
-//                 y += yIncrease;
-//                 yIndex = int(y) ;//-1;
-//                 //x方向有可能一步跨越两个格子，如果x1 ！= x2则跨越两个格子，需要更新两个
-//                 int x1 = int(x);
-//                 x += xIncrease;
-//                 int x2 = int(x);
-//                 if(x1 != x2)
-//                 {
-//                     HighResMap[yIndex][x1] += MissProbability;
-//                     // HighResMap[yIndex][x1] = std::clamp<float>(HighResMap[yIndex][x1], LogOddMin, LogOddMax);
-//                     HighResMap[yIndex][x2] += MissProbability;
-//                     // HighResMap[yIndex][x2] = std::clamp<float>(HighResMap[yIndex][x2], LogOddMin, LogOddMax);
-//                 }
-//                 else 
-//                 {
-//                     HighResMap[yIndex][x1] += MissProbability;
-//                     // HighResMap[yIndex][x1] = std::clamp<float>(HighResMap[yIndex][x1], LogOddMin, LogOddMax);
-//                 }
-//             }
-//         }
-//     }
-//     else if(abs(k) == 1)
-//     {
-//         //射线45度
-//         int xOffset = endIndexX - startIndexX;
-//         int yOffset = endIndexY - startIndexY;
-//         int xIncrease = abs(xOffset)/xOffset;
-//         int yIncrease = abs(yOffset)/yOffset;
-
-//         int i = startIndexX, j = startIndexY;
-//         while(i != endIndexX)
-//         {
-//             HighResMap[j][i] += MissProbability;
-//             i += xIncrease;
-//             j += yIncrease;
-//         }
-//         HighResMap[endIndexY][endIndexX] += HitProbability;
-//         // HighResMap[endIndexY][endIndexX] = std::clamp<float>(HighResMap[endIndexY][endIndexX], LogOddMin, LogOddMax);
-//     }
-
-//     return;
-
-// }
-
-
-
-//T是scan在世界坐标系下的坐标，转换到栅格map上需要做一个坐标变换
-//栅格map（0,0）点在坐标系左上角
 void ProbablisticGridMap::updateHighMap(std::vector<LaserPointXY<float>>* laserScan, Eigen::Matrix3f T)
 {
     int scanLen = laserScan->size();
@@ -434,11 +230,12 @@ void ProbablisticGridMap::updateHighMap(std::vector<LaserPointXY<float>>* laserS
     offsetX = HighResMapIndex/2;
     offsetY = HighResMapIndex/2;
 
-    //栅格坐标系的x轴向右，y轴向下（和世界坐标系相反）
+    //x direction of the grid frame is right
+    //y direction of the grid frame is downside
     startIndexX =  int(T(0,2)/pixelSize) + offsetX;
     startIndexY = -int(T(1,2)/pixelSize) + offsetY;
 
-    assert(startIndexX <= offsetX*2 && startIndexY <= offsetY*2);//判断index是否越界
+    assert(startIndexX <= offsetX*2 && startIndexY <= offsetY*2);
 
     Eigen::Vector3f endPos;
     for(int i = 0; i < scanLen; i++)
@@ -449,35 +246,26 @@ void ProbablisticGridMap::updateHighMap(std::vector<LaserPointXY<float>>* laserS
         endPos(1) = laserScan->at(i).y;
         endPos(2) = 1.0;
 
-        endPos = T * endPos;//雷达坐标系转世界坐标系
+        endPos = T * endPos;//transfer from laser frame to world frame
 
-        //世界坐标系转栅格坐标系
+        //transfer from world frame to grid frame
         endIndexX =  int(endPos(0) / pixelSize) + offsetX;
         endIndexY = -int(endPos(1) / pixelSize) + offsetY;
 
-        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2);//判断index是否越界
+        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2);
 
-        //该代码段判断end index是否已经出现过，如果出现过则不用再次设置栅格概率值
-        //保证一帧数据只更新一个栅格概率值一次
+        //if the end grid is updated, then don't update it again
+        //no use
         gIndex.x = endIndexX;
         gIndex.y = endIndexY;
         if(uSet.find(gIndex) != uSet.end())
         {
-            //已经包含了该元素，什么都不做
             //continue;
         }
         uSet.emplace(gIndex);
 
         setLaserGridProbability(startIndexX, startIndexY, endIndexX, endIndexY);
     }
-
-    //temporary solution , should not use in real practice
-    // for(int i = 0; i < 10000; i ++)
-    //     for(int j = 0; j < 10000; j ++)
-    //     {
-    //         if(HighResMap[i][j] > 1.) HighResMap[i][j] = 1.;
-    //         else if(HighResMap[i][j] < -1.) HighResMap[i][j] = -1.;
-    //     }
 
 }
 
@@ -517,14 +305,13 @@ float ProbablisticGridMap::getScanProbability(int resolution, std::vector<LaserP
         endPos(1) = laserScan->at(i).y;
         endPos(2) = 1.0;
 
-        endPos = T * endPos;//雷达坐标系转世界坐标系
+        endPos = T * endPos;
 
-        //世界坐标系转栅格坐标系
         endIndexX =  int(endPos(0) / pixelSize) + offsetX;
         endIndexY = -int(endPos(1) / pixelSize) + offsetY;
 
-        //assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2);//判断index是否越界
-        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2 && endIndexX >= 0 && endIndexY >= 0);//判断index是否越界
+        //assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2);
+        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2 && endIndexX >= 0 && endIndexY >= 0);
 
 
         //because points of longer distances are hard to match, so they should be assigned large sigma assosiated with their distance
@@ -570,14 +357,12 @@ float ProbablisticGridMap::getScanProbabilityInHighMap(std::vector<LaserPointXY<
         endPos(1) = laserScan->at(i).y;
         endPos(2) = 1.0;
 
-        endPos = T * endPos;//雷达坐标系转世界坐标系
+        endPos = T * endPos;
 
-        //世界坐标系转栅格坐标系
         endIndexX =  int(endPos(0) / pixelSize) + offsetX;
         endIndexY = -int(endPos(1) / pixelSize) + offsetY;
 
-        //assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2);//判断index是否越界
-        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2 && endIndexX >= 0 && endIndexY >= 0);//判断index是否越界
+        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2 && endIndexX >= 0 && endIndexY >= 0);
 
 
         //because points of longer distances are hard to match, so they should be assigned large sigma assosiated with their distance
@@ -619,14 +404,12 @@ float ProbablisticGridMap::getScanProbabilityInLowMap(std::vector<LaserPointXY<f
         endPos(1) = laserScan->at(i).y;
         endPos(2) = 1.0;
 
-        endPos = T * endPos;//雷达坐标系转世界坐标系
+        endPos = T * endPos;
 
-        //世界坐标系转栅格坐标系
         endIndexX =  int(endPos(0) / pixelSize) + offsetX;
         endIndexY = -int(endPos(1) / pixelSize) + offsetY;
 
-        //assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2);//判断index是否越界
-        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2 && endIndexX >= 0 && endIndexY >= 0);//判断index是否越界
+        assert(endIndexX <= offsetX*2 && endIndexY <= offsetY*2 && endIndexX >= 0 && endIndexY >= 0);
 
 
         //because points of longer distances are hard to match, so they should be assigned large sigma assosiated with their distance
@@ -650,11 +433,13 @@ float ProbablisticGridMap::getScanProbabilityInLowMap(std::vector<LaserPointXY<f
 
 }
 
-//低精度地图栅格的更新由高精度地图生成
+//low resolutin grid map is created from high resolution grid map
+//a 10*10 grids region in high resolution grid map is merged into one grid in low resolution grid map
+//the value of the grid in the low resolution grid map is the maximum value in the 10*10 region of the high resolution grid map 
 void ProbablisticGridMap::updateLowMap(void)
 {
-    //lamda表达式定义一个寻找10*10局部栅格最大值的内联函数
-    //用于在高精度栅格内的局部空间寻找最大值并赋值给低精度栅格
+    //define a inline function using lamda express
+    //find out the maximum value in the 10*10 grids region of high resolution grid map
     auto findMaxGridVal = [&](int row, int col){
         float maxVal = -FLT_MAX;
         for(int i = row; i < row + 10; i++)
@@ -667,7 +452,6 @@ void ProbablisticGridMap::updateLowMap(void)
         return maxVal;
     };
 
-    //遍历高精度地图，更新低精度地图
     int m = 0, n = 0;
     for(int i = 0; i < HighResMapIndex; i += 10)
     {
@@ -678,12 +462,10 @@ void ProbablisticGridMap::updateLowMap(void)
 
             //if(LowResMap[m][n] != 0.0)
             //cout<<LowResMap[m][n]<<" ";
-
         }
         m++;
         n = 0;
     }
-    //cout<<"\n";
 }
 
 
