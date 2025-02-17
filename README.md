@@ -1,10 +1,10 @@
 Laser SLAM project
 
-This project is base on the algorithm from google cartographer.
+This project is base on the algorithms of Real-Time Correlative Scan Matching, Real-Time Loop Closure in 2D LIDAR SLAM.
 And it's integrated with ROS2 Humble, on Ubuntu 22.04.
 
-It's integrated with fast-correlated-scan-matcher and ceres-scan-matcher. 
-But I haven't integrated odometry and IMU processing steps yet, it will be done later.
+It's now been integrated with fast-correlated-scan-matcher and ceres-scan-matcher. 
+But I haven't integrated odometry and IMU processing steps yet, I will do it later if I have time:)
 
 Project Dependents:
 1) ROS2 Humble
